@@ -38,7 +38,7 @@ def main(userPrompt):
     augPrompt = ""
     userPromptQAugment = userPrompt
     if user_prompt_contains_questions == False:
-        augPrompt = "Here is a customer issue: \n\n" + f"{userPrompt}\n\n" + "Act as this customer. What are you trying to ask? Be concise. Generate the response as a question."    
+        augPrompt = "Here is a customer issue: \n\n" + f"'{userPrompt}'\n\n" + "Act as this customer. What are you trying to ask? Be concise. Generate the response as a question."    
         print(f"{augPrompt}")
         resp = llm.complete(f"{augPrompt}")
         print(f"{resp}")
