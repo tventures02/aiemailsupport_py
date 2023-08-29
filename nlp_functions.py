@@ -12,3 +12,8 @@ def contains_question(text):
         if sentence.strip().endswith('?'):
             return True
     return False
+
+
+def find_matches(input_text, substrings):
+    matches = [substring for substring in substrings if substring in input_text]
+    return ', '.join(matches)

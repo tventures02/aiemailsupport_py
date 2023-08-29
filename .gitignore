@@ -27,6 +27,8 @@ build/Release
 venv
 venv/*
 
+prompt.txt
+
 
 # Debug log from npm
 npm-debug.log
@@ -43,5 +45,3 @@ storage/*
 
 testPrompts*
 testResults.txt
-
-

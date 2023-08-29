@@ -3,7 +3,7 @@ import os
 
 def main():
     # Get user confirmation
-    user_input = input("Running this script will cost OpenAI credits proportional to the number of test prompts. Do you want to run this test? Y/N: ").strip().upper()
+    user_input = input("Running this script will cost OpenAI credits proportional to the number of test prompts in 'testPrompts.txt'. Do you want to run this test? Y/N: ").strip().upper()
 
     if user_input == 'Y':
         # Check if the file exists and then delete it

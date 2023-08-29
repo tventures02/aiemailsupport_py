@@ -14,7 +14,7 @@ from llama_index.node_parser import SimpleNodeParser
 from llama_index.evaluation import ResponseEvaluator
 from llama_index.callbacks import CallbackManager, LlamaDebugHandler
 from email_support_QA_prompts import EMAIL_SUPPORT_TEXT_QA_PROMPT
-# from nlp_functions import contains_question
+from nlp_functions import find_matches, contains_question
 
 def load_index_from_disk(index_path):
     try:
@@ -28,18 +28,24 @@ def load_index_from_disk(index_path):
         return None
 
 def main(userPrompt, saveResults):
-    print(f"You passed the prompt:\n {userPrompt} \n\n")
+    print(f"You passed the prompt:")
+    print(userPrompt + "\n\n")
     llama_debug = LlamaDebugHandler(print_trace_on_end=True)
     callback_manager = CallbackManager([llama_debug])
 
-    # llm = OpenAI(temperature=0, model="gpt-4")
     model = "gpt-3.5-turbo"
+    # model = "gpt-4"
     llm = OpenAI(temperature=0, model=model)
 
-    augPrompt = "Here is a customer issue: \n\n" + f"'{userPrompt}'\n\n" + "Act as this customer. What are you trying to ask? Be concise. Generate the response as a question."
-    resp = llm.complete(f"{augPrompt}")
-    userPromptQAugment = userPrompt + "\n\n" + resp.text
-    print(f"{userPromptQAugment}")
+    # Augment the user's prompt with a question if there are no questions in the prompt
+    user_prompt_contains_question = contains_question(userPrompt)
+    userPromptQAugment = userPrompt
+    if user_prompt_contains_question == False:
+        augPrompt = "Here is a customer issue: \n\n" + f"'{userPrompt}'\n\n" + "Act as this customer. What are you trying to ask? Be concise. Generate the response as a question. Avoid 'why' questions."
+        resp = llm.complete(f"{augPrompt}")
+        userPromptQAugment = userPrompt + "\n\n" + resp.text
+        print(f"Question augmented user prompt:")
+        print(f"{userPromptQAugment}\n\n")
 
     service_context = ServiceContext.from_defaults(
         llm=llm,
@@ -71,25 +77,27 @@ def main(userPrompt, saveResults):
     # Print info on llm inputs/outputs
     event_pairs = llama_debug.get_llm_inputs_outputs()
     print(event_pairs[0][0]) # Show what was sent to LLM
-    print("\n\nAnswer (from gpt-3.5-turbo): ")
+    print(f"\n\nAnswer ({model}): ")
     print(response)
 
-    # evaluator = ResponseEvaluator(service_context=service_context)
-    # eval_result = evaluator.evaluate(response)
-    # print("Does response match context?")
-    # print(str(eval_result))
+    # Refine answer if it LLM deviated from guardrails
+    unwanted_text = ["email support system", "customer support system", "contact our support team", "contacting our support team"]
+    matches = find_matches(response.response, unwanted_text)
+    if matches:
+        improveRespPrompt = f"Remove any sentences mentioning \"{matches}\" or similar:\n\n" + f"\"{response.response}\"\n\n Then, rewrite the response." 
+        improvedResp = llm.complete(improveRespPrompt)
+        print(f"\n\nImproved answer ({model}): ")
+        print(improvedResp.text)
+        response.response = improvedResp.text
 
     if saveResults == '1':
         # Open the file in append mode ('a') and write the text
         with open("testResults.txt", "a") as file:
             file.write("Prompt:\n" + userPromptQAugment + "\n\n")
             file.write("Answer (" + model + "):\n" + response.response + "\n\n")
-            # file.write("Does response match context?\n" + str(eval_result))
             file.write("\n\n---------------------------\n\n")
 
-    # substring = "will look into"
-
-    # if substring in response.response:
+    # if str(eval_result) == 'NO':
     #     llm = OpenAI(temperature=0, model="gpt-4")
     #     service_context = ServiceContext.from_defaults(
     #         llm=llm,
@@ -100,10 +108,10 @@ def main(userPrompt, saveResults):
     #     nodes = parser.get_nodes_from_documents(documents)
     #     index = VectorStoreIndex(nodes, service_context=service_context)
     #     query_engine = index.as_query_engine(
-    #         text_qa_template=EMAIL_SUPPORT_TEXT_QA_PROMPT
+    #         text_qa_template=EMAIL_SUPPORT_TEXT_QA_PROMPT,
     #     )
         
-    #     response = query_engine.query(userPromptQuestionAug)
+    #     response = query_engine.query(userPromptQAugment)
     #     event_pairs = llama_debug.get_llm_inputs_outputs()
     #     print(event_pairs[0][0]) # Show what was sent to LLM
     #     print(event_pairs[0][1].payload["response"]) # Shows the LLM response it generated.
