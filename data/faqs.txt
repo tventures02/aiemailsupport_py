@@ -77,12 +77,6 @@ No, cells in the Link column need to be formatted as the URL itself rather than 
 One option is add the activity to an open row using Add Place or by typing it in and leave the date blank for that activity. When you're ready to assign it a date, open Edit Trip (see this video) to drag it into the desired date. This will automatically format the itinerary in date order (be sure to click Save).
 If you already have the Activities Without Dates column in the Edit Trip view, you can click Add Place there to add additional activities. If you don't have this column because all your activities have dates, click More Info on any activity in the Edit Trip view and click the X in the bottom left of the activity to remove its date.
 
-21) Does the add-on work with the Blue Planit web app?
-No, the Travel Mapper add-on is not interactive and information on one app is not shared with the other app. The add-on is not linked with the web app.
-
-22) I want to delete my account. How do i do that?
-Please send us an email with your account information and our support team will handle that for you.
-
 Aerodynamics (Ancient Greek: ἀήρ aero (air) + Ancient Greek: δυναμική (dynamics)) is the study of the motion of air, particularly when affected by a solid object, such as an airplane wing.[1] It involves topics covered in the field of fluid dynamics and its subfield of gas dynamics, and is an important domain of study in aeronautics. The term aerodynamics is often used synonymously with gas dynamics, the difference being that "gas dynamics" applies to the study of the motion of all gases, and is not limited to air. The formal study of aerodynamics began in the modern sense in the eighteenth century, although observations of fundamental concepts such as aerodynamic drag were recorded much earlier. Most of the early efforts in aerodynamics were directed toward achieving heavier-than-air flight, which was first demonstrated by Otto Lilienthal in 1891.[2] Since then, the use of aerodynamics through mathematical analysis, empirical approximations, wind tunnel experimentation, and computer simulations has formed a rational basis for the development of heavier-than-air flight and a number of other technologies. Recent work in aerodynamics has focused on issues related to compressible flow, turbulence, and boundary layers and has become increasingly computational in nature.
 
 History
