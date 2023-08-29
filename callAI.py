@@ -1,3 +1,4 @@
+import sys
 from langchain.llms import OpenAI
 from llama_index.llms import OpenAI
 from llama_index import (
@@ -8,8 +9,9 @@ from llama_index import (
     load_index_from_storage,
     set_global_service_context,
 )
+from llama_index.indices.postprocessor import SentenceTransformerRerank
 from llama_index.node_parser import SimpleNodeParser
-import sys
+from llama_index.evaluation import ResponseEvaluator
 from llama_index.callbacks import CallbackManager, LlamaDebugHandler
 from email_support_QA_prompts import EMAIL_SUPPORT_TEXT_QA_PROMPT
 from nlp_functions import contains_question
@@ -63,7 +65,8 @@ def main(userPrompt):
         index.storage_context.persist()
 
     query_engine = index.as_query_engine(
-        text_qa_template=EMAIL_SUPPORT_TEXT_QA_PROMPT
+        text_qa_template=EMAIL_SUPPORT_TEXT_QA_PROMPT,
+        similarity_top_k=1,
     )
     response = query_engine.query(userPromptQAugment)
 
@@ -72,7 +75,11 @@ def main(userPrompt):
     print(event_pairs[0][0]) # Show what was sent to LLM
     print("\n\nAnswer (from gpt-3.5-turbo): ")
     print(response)
-    
+
+    evaluator = ResponseEvaluator(service_context=service_context)
+    eval_result = evaluator.evaluate(response)
+    print("Does response match context?")
+    print(str(eval_result))
     # substring = "will look into"
 
     # if substring in response.response:
