@@ -14,7 +14,7 @@ from llama_index.node_parser import SimpleNodeParser
 from llama_index.evaluation import ResponseEvaluator
 from llama_index.callbacks import CallbackManager, LlamaDebugHandler
 from email_support_QA_prompts import EMAIL_SUPPORT_TEXT_QA_PROMPT
-from nlp_functions import contains_question
+# from nlp_functions import contains_question
 
 def load_index_from_disk(index_path):
     try:
@@ -27,27 +27,19 @@ def load_index_from_disk(index_path):
         print(f"Index {index_path} not found!")
         return None
 
-def main(userPrompt):
+def main(userPrompt, saveResults):
     print(f"You passed the prompt:\n {userPrompt} \n\n")
     llama_debug = LlamaDebugHandler(print_trace_on_end=True)
     callback_manager = CallbackManager([llama_debug])
 
     # llm = OpenAI(temperature=0, model="gpt-4")
-    llm = OpenAI(temperature=0, model="gpt-3.5-turbo")
+    model = "gpt-3.5-turbo"
+    llm = OpenAI(temperature=0, model=model)
 
-    user_prompt_contains_questions = contains_question(userPrompt)
-
-    augPrompt = ""
-    userPromptQAugment = userPrompt
-    if user_prompt_contains_questions == False:
-        augPrompt = "Here is a customer issue: \n\n" + f"'{userPrompt}'\n\n" + "Act as this customer. What are you trying to ask? Be concise. Generate the response as a question."    
-        print(f"{augPrompt}")
-        resp = llm.complete(f"{augPrompt}")
-        print(f"{resp}")
-        userPromptQAugment = userPrompt + "\n\n" + resp.text
-        print(f"{userPromptQAugment}")
-    else:
-        userPromptQAugment = userPrompt
+    augPrompt = "Here is a customer issue: \n\n" + f"'{userPrompt}'\n\n" + "Act as this customer. What are you trying to ask? Be concise. Generate the response as a question."
+    resp = llm.complete(f"{augPrompt}")
+    userPromptQAugment = userPrompt + "\n\n" + resp.text
+    print(f"{userPromptQAugment}")
 
     service_context = ServiceContext.from_defaults(
         llm=llm,
@@ -64,9 +56,15 @@ def main(userPrompt):
         index = VectorStoreIndex(nodes, service_context=service_context)
         index.storage_context.persist()
 
+    #https://wandb.ai/ayush-thakur/llama-index-report/reports/Building-Advanced-Query-Engine-and-Evaluation-with-LlamaIndex-and-W-B--Vmlldzo0OTIzMjMy#setting-up-evaluation-using-llamaindex
+    rerank = SentenceTransformerRerank(
+        model="cross-encoder/ms-marco-MiniLM-L-2-v2", top_n=2
+    )
+
     query_engine = index.as_query_engine(
         text_qa_template=EMAIL_SUPPORT_TEXT_QA_PROMPT,
-        similarity_top_k=1,
+        similarity_top_k=4,
+        node_postprocessors=[rerank],
     )
     response = query_engine.query(userPromptQAugment)
 
@@ -76,10 +74,19 @@ def main(userPrompt):
     print("\n\nAnswer (from gpt-3.5-turbo): ")
     print(response)
 
-    evaluator = ResponseEvaluator(service_context=service_context)
-    eval_result = evaluator.evaluate(response)
-    print("Does response match context?")
-    print(str(eval_result))
+    # evaluator = ResponseEvaluator(service_context=service_context)
+    # eval_result = evaluator.evaluate(response)
+    # print("Does response match context?")
+    # print(str(eval_result))
+
+    if saveResults == '1':
+        # Open the file in append mode ('a') and write the text
+        with open("testResults.txt", "a") as file:
+            file.write("Prompt:\n" + userPromptQAugment + "\n\n")
+            file.write("Answer (" + model + "):\n" + response.response + "\n\n")
+            # file.write("Does response match context?\n" + str(eval_result))
+            file.write("\n\n---------------------------\n\n")
+
     # substring = "will look into"
 
     # if substring in response.response:
@@ -105,9 +112,9 @@ def main(userPrompt):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python myscript.py <your_argument>")
+    if len(sys.argv) != 3:
+        print("Usage: python callAI.py <prompt> <save results to txt file = 1, else = 0>")
     else:
-        main(sys.argv[1])
+        main(sys.argv[1], sys.argv[2])
 
 
