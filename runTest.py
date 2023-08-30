@@ -1,5 +1,6 @@
 import callAI
 import os
+from email_support_QA_prompts import SYSTEM_PROMPT
 
 def main():
     # Get user confirmation
@@ -25,6 +26,8 @@ def main():
                 # If there's actual content in the testPrompt, process it
                 if testPrompt:
                     callAI.main(testPrompt,'1')
+            with open("testResults.txt", "a") as file:
+                file.write("\n\nSYS PROMPT:\n" + SYSTEM_PROMPT)
 
     elif user_input == 'N':
         print("Script was not run.")

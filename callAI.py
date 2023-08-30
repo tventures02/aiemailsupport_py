@@ -33,30 +33,34 @@ def main(userPrompt, saveResults):
     llama_debug = LlamaDebugHandler(print_trace_on_end=True)
     callback_manager = CallbackManager([llama_debug])
 
-    model = "gpt-3.5-turbo"
-    # model = "gpt-4"
-    llm = OpenAI(temperature=0, model=model)
+    # Settings
+    rerankTopN = 2
+    similarityTopK = 4
+    loadDataPath = 'data'
+    index_path = './storage'
+
+    llm_gpt4 = OpenAI(temperature=0, model='gpt-4')
+    llm_gpt35 = OpenAI(temperature=0, model='gpt-3.5-turbo')
 
     # Augment the user's prompt with a question if there are no questions in the prompt
     user_prompt_contains_question = contains_question(userPrompt)
     userPromptQAugment = userPrompt
     if user_prompt_contains_question == False:
         augPrompt = "Here is a customer issue: \n\n" + f"'{userPrompt}'\n\n" + "Act as this customer. What are you trying to ask? Be concise. Generate the response as a question. Avoid 'why' questions."
-        resp = llm.complete(f"{augPrompt}")
+        resp = llm_gpt35.complete(f"{augPrompt}")
         userPromptQAugment = userPrompt + "\n\n" + resp.text
         print(f"Question augmented user prompt:")
         print(f"{userPromptQAugment}\n\n")
 
     service_context = ServiceContext.from_defaults(
-        llm=llm,
+        llm=llm_gpt4,
         callback_manager=callback_manager
         )
     set_global_service_context(service_context)
-    index_path = "./storage"
     index = load_index_from_disk(index_path)
 
     if index is None:
-        documents = SimpleDirectoryReader('data').load_data()
+        documents = SimpleDirectoryReader(loadDataPath).load_data()
         parser = SimpleNodeParser.from_defaults() # default chunk_size=1024, chunk_overlap=20
         nodes = parser.get_nodes_from_documents(documents)
         index = VectorStoreIndex(nodes, service_context=service_context)
@@ -64,12 +68,12 @@ def main(userPrompt, saveResults):
 
     #https://wandb.ai/ayush-thakur/llama-index-report/reports/Building-Advanced-Query-Engine-and-Evaluation-with-LlamaIndex-and-W-B--Vmlldzo0OTIzMjMy#setting-up-evaluation-using-llamaindex
     rerank = SentenceTransformerRerank(
-        model="cross-encoder/ms-marco-MiniLM-L-2-v2", top_n=2
+        model="cross-encoder/ms-marco-MiniLM-L-2-v2", top_n=rerankTopN
     )
 
     query_engine = index.as_query_engine(
         text_qa_template=EMAIL_SUPPORT_TEXT_QA_PROMPT,
-        similarity_top_k=4,
+        similarity_top_k=similarityTopK,
         node_postprocessors=[rerank],
     )
     response = query_engine.query(userPromptQAugment)
@@ -77,7 +81,7 @@ def main(userPrompt, saveResults):
     # Print info on llm inputs/outputs
     event_pairs = llama_debug.get_llm_inputs_outputs()
     print(event_pairs[0][0]) # Show what was sent to LLM
-    print(f"\n\nAnswer ({model}): ")
+    print(f"\n\nAnswer: ")
     print(response)
 
     # Refine answer if it LLM deviated from guardrails
@@ -85,8 +89,8 @@ def main(userPrompt, saveResults):
     matches = find_matches(response.response, unwanted_text)
     if matches:
         improveRespPrompt = f"Remove any sentences mentioning \"{matches}\" or similar:\n\n" + f"\"{response.response}\"\n\n Then, rewrite the response." 
-        improvedResp = llm.complete(improveRespPrompt)
-        print(f"\n\nImproved answer ({model}): ")
+        improvedResp = llm_gpt35.complete(improveRespPrompt)
+        print(f"\n\nImproved answer: ")
         print(improvedResp.text)
         response.response = improvedResp.text
 
@@ -94,30 +98,9 @@ def main(userPrompt, saveResults):
         # Open the file in append mode ('a') and write the text
         with open("testResults.txt", "a") as file:
             file.write("Prompt:\n" + userPromptQAugment + "\n\n")
-            file.write("Answer (" + model + "):\n" + response.response + "\n\n")
+            file.write("Answer:\n" + response.response + "\n\n")
+            file.write("Settings:\n" + "rerank top n: " + rerankTopN + ", similarity top K:" + similarityTopK)
             file.write("\n\n---------------------------\n\n")
-
-    # if str(eval_result) == 'NO':
-    #     llm = OpenAI(temperature=0, model="gpt-4")
-    #     service_context = ServiceContext.from_defaults(
-    #         llm=llm,
-    #         callback_manager=callback_manager
-    #     )
-    #     documents = SimpleDirectoryReader('data').load_data()
-    #     parser = SimpleNodeParser.from_defaults() # default chunk_size=1024, chunk_overlap=20
-    #     nodes = parser.get_nodes_from_documents(documents)
-    #     index = VectorStoreIndex(nodes, service_context=service_context)
-    #     query_engine = index.as_query_engine(
-    #         text_qa_template=EMAIL_SUPPORT_TEXT_QA_PROMPT,
-    #     )
-        
-    #     response = query_engine.query(userPromptQAugment)
-    #     event_pairs = llama_debug.get_llm_inputs_outputs()
-    #     print(event_pairs[0][0]) # Show what was sent to LLM
-    #     print(event_pairs[0][1].payload["response"]) # Shows the LLM response it generated.
-    #     print("\n\nAnswer (from gpt-4): ")
-    #     print(response)
-
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:

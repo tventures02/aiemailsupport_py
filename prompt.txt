@@ -1,8 +1,1 @@
-Good afternoon
-
-I would like to know if it is possible to import a list from Google maps to a spreadsheet 
-
-Please let me know
-Thanks so much!!
-
-álvaro konopka
+I had a spreadsheet with all of my data in it, and opened travelmapper in a new sheet. It has now deleted all of my data I had spent a long time colalting.
