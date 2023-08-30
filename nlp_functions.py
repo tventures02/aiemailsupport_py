@@ -1,6 +1,7 @@
 import nltk
 import re
 from nltk.tokenize import sent_tokenize
+from nltk.tokenize import word_tokenize
 
 nltk.download('punkt')
 
@@ -31,3 +32,7 @@ def remove_sentences(paragraph, matches):
 
     # Join the filtered sentences back into a paragraph
     return ' '.join(filtered_sentences)
+
+def count_tokens(documents):
+    return sum([len(word_tokenize(document.text)) for document in documents])
+

@@ -20,7 +20,6 @@ from email_support_QA_prompts import (
 from nlp_functions import (
     find_matches,
     contains_question,
-    remove_sentences
     )
 
 def load_index_from_disk(index_path):
@@ -47,8 +46,8 @@ def main(userPrompt, saveResults):
     index_path = './storage'
 
     llm_gpt35 = OpenAI(temperature=0, model='gpt-3.5-turbo')
-    llm_gpt4 = OpenAI(temperature=0, model='gpt-3.5-turbo')
-    # llm_gpt4 = OpenAI(temperature=0, model='gpt-4')
+    # llm_gpt4 = OpenAI(temperature=0, model='gpt-3.5-turbo')
+    llm_gpt4 = OpenAI(temperature=0, model='gpt-4')
 
     # Augment the user's prompt with a question if there are no questions in the prompt
     user_prompt_contains_question = contains_question(userPrompt)
@@ -96,9 +95,11 @@ def main(userPrompt, saveResults):
     # Refine answer if the LLM deviated from guardrails
     matches = find_matches(response.response, UNWANTED_SENTENCE_PHRASES)
     if matches:
-        improvedResp = remove_sentences(response.response, matches)
+        improveRespPrompt = f"Remove any text mentioning \"{matches}\" or similar:\n\n" + f"\"{response.response}\"\n\n Then, rewrite a sensible response." 
+        improvedResp = llm_gpt35.complete(improveRespPrompt)
         print(f"\n\nImproved answer: ")
-        print(improvedResp)
+        print(improvedResp.text)
+        improvedResp = improvedResp.text.strip('\'"')
         response.response = improvedResp
 
     if saveResults == '1':

@@ -1,6 +1,8 @@
-Hello,
+Good afternoon
 
-I was using the Travel Mapper sheet on another computer and when I reopened it, the map was gone. Will the API to be placed in cell b1 on sheet three be sent by email or can I not use this file on more than one computer? 
+I would like to know if it is possible to import a list from Google maps to a spreadsheet 
 
-Davia C. Downey, PhD
-Director, Ph.D. in Urban Affairs
+Please let me know
+Thanks so much!!
+
+álvaro konopka
