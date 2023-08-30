@@ -13,8 +13,15 @@ from llama_index.indices.postprocessor import SentenceTransformerRerank
 from llama_index.node_parser import SimpleNodeParser
 from llama_index.evaluation import ResponseEvaluator
 from llama_index.callbacks import CallbackManager, LlamaDebugHandler
-from email_support_QA_prompts import EMAIL_SUPPORT_TEXT_QA_PROMPT
-from nlp_functions import find_matches, contains_question
+from email_support_QA_prompts import (
+    EMAIL_SUPPORT_TEXT_QA_PROMPT,
+    UNWANTED_SENTENCE_PHRASES
+)
+from nlp_functions import (
+    find_matches,
+    contains_question,
+    remove_sentences
+    )
 
 def load_index_from_disk(index_path):
     try:
@@ -39,8 +46,9 @@ def main(userPrompt, saveResults):
     loadDataPath = 'data'
     index_path = './storage'
 
-    llm_gpt4 = OpenAI(temperature=0, model='gpt-4')
     llm_gpt35 = OpenAI(temperature=0, model='gpt-3.5-turbo')
+    llm_gpt4 = OpenAI(temperature=0, model='gpt-3.5-turbo')
+    # llm_gpt4 = OpenAI(temperature=0, model='gpt-4')
 
     # Augment the user's prompt with a question if there are no questions in the prompt
     user_prompt_contains_question = contains_question(userPrompt)
@@ -63,6 +71,7 @@ def main(userPrompt, saveResults):
         documents = SimpleDirectoryReader(loadDataPath).load_data()
         parser = SimpleNodeParser.from_defaults() # default chunk_size=1024, chunk_overlap=20
         nodes = parser.get_nodes_from_documents(documents)
+        # print(nodes)
         index = VectorStoreIndex(nodes, service_context=service_context)
         index.storage_context.persist()
 
@@ -84,22 +93,20 @@ def main(userPrompt, saveResults):
     print(f"\n\nAnswer: ")
     print(response)
 
-    # Refine answer if it LLM deviated from guardrails
-    unwanted_text = ["email support system", "customer support system", "contact our support team", "contacting our support team"]
-    matches = find_matches(response.response, unwanted_text)
+    # Refine answer if the LLM deviated from guardrails
+    matches = find_matches(response.response, UNWANTED_SENTENCE_PHRASES)
     if matches:
-        improveRespPrompt = f"Remove any sentences mentioning \"{matches}\" or similar:\n\n" + f"\"{response.response}\"\n\n Then, rewrite the response." 
-        improvedResp = llm_gpt35.complete(improveRespPrompt)
+        improvedResp = remove_sentences(response.response, matches)
         print(f"\n\nImproved answer: ")
-        print(improvedResp.text)
-        response.response = improvedResp.text
+        print(improvedResp)
+        response.response = improvedResp
 
     if saveResults == '1':
         # Open the file in append mode ('a') and write the text
         with open("testResults.txt", "a") as file:
             file.write("Prompt:\n" + userPromptQAugment + "\n\n")
             file.write("Answer:\n" + response.response + "\n\n")
-            file.write("Settings:\n" + "rerank top n: " + rerankTopN + ", similarity top K:" + similarityTopK)
+            file.write("Settings:\n" + "rerank top n: " + str(rerankTopN) + ", similarity top K:" + str(similarityTopK))
             file.write("\n\n---------------------------\n\n")
 
 if __name__ == "__main__":

@@ -42,3 +42,12 @@ EMAIL_SUPPORT_QA_PROMPT_TMPL_MSGS = [
 ]
 
 EMAIL_SUPPORT_TEXT_QA_PROMPT = ChatPromptTemplate(message_templates=EMAIL_SUPPORT_QA_PROMPT_TMPL_MSGS)
+
+UNWANTED_SENTENCE_PHRASES = [
+    "email support system",
+    "customer support system",
+    "contact our support team",
+    "contacting our support team",
+    "provided context information",
+    "context information provided"
+    ]

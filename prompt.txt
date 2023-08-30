@@ -1,1 +1,6 @@
-I had a spreadsheet with all of my data in it, and opened travelmapper in a new sheet. It has now deleted all of my data I had spent a long time colalting.
+Hello,
+
+I was using the Travel Mapper sheet on another computer and when I reopened it, the map was gone. Will the API to be placed in cell b1 on sheet three be sent by email or can I not use this file on more than one computer? 
+
+Davia C. Downey, PhD
+Director, Ph.D. in Urban Affairs
