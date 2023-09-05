@@ -44,6 +44,7 @@ def main(userPrompt, saveResults):
     similarityTopK = 4
     loadDataPath = 'data'
     index_path = './storage'
+    evaluateResponse = True
 
     llm_gpt35 = OpenAI(temperature=0, model='gpt-3.5-turbo')
     # llm_gpt4 = OpenAI(temperature=0, model='gpt-3.5-turbo')
@@ -91,6 +92,12 @@ def main(userPrompt, saveResults):
     print(event_pairs[0][0]) # Show what was sent to LLM
     print(f"\n\nAnswer: ")
     print(response)
+
+    if (evaluateResponse):
+        service_context35 = ServiceContext.from_defaults(llm=llm_gpt35)
+        evaluator = ResponseEvaluator(service_context=service_context35)
+        eval_result = evaluator.evaluate(response)
+        print(str(eval_result)) # YES indicates the response was contructed from the source context well. NO indicates otherwise or it hallucinated 
 
     # Refine answer if the LLM deviated from guardrails
     matches = find_matches(response.response, UNWANTED_SENTENCE_PHRASES)
