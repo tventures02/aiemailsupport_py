@@ -1,5 +1,4 @@
 import sys
-from langchain.llms import OpenAI
 from llama_index.llms import OpenAI
 from llama_index import (
     VectorStoreIndex,
