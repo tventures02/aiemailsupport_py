@@ -1,4 +1,5 @@
 import sys
+import json
 import nltk
 nltk.data.path.append("./nltk_data")
 from llama_index.llms import OpenAI
@@ -94,11 +95,13 @@ def main(userPrompt, saveResults):
     print(f"\n\nAnswer: ")
     print(response)
 
+    doesAnswerMatchSource = "NO"
     if (evaluateResponse):
         service_context35 = ServiceContext.from_defaults(llm=llm_gpt35)
         evaluator = ResponseEvaluator(service_context=service_context35)
         eval_result = evaluator.evaluate(response)
         print(str(eval_result)) # YES indicates the response was contructed from the source context well. NO indicates otherwise or it hallucinated 
+        doesAnswerMatchSource = str(eval_result)
 
     # Refine answer if the LLM deviated from guardrails
     matches = find_matches(response.response, UNWANTED_SENTENCE_PHRASES)
@@ -118,16 +121,27 @@ def main(userPrompt, saveResults):
             file.write("Settings:\n" + "rerank top n: " + str(rerankTopN) + ", similarity top K:" + str(similarityTopK))
             file.write("\n\n---------------------------\n\n")
 
-    return response
+    return {
+        'responseText': response.response,
+        'originalPrompt': userPrompt,
+        'userPromptQAugment': userPromptQAugment,
+        'doesAnswerMatchSource': doesAnswerMatchSource == 'YES',
+        # TODO return how many tokens were used, source vector(s), actual, complete prompt to chatgpt
+    }
 
 def lambda_handler(event, context):
     arg1 = event.get("prompt")
     print(arg1)
-    response = main(arg1,"0")
+    output = main(arg1,"0")
     
     return {
         'statusCode': 200,
-        'body': response
+        'body': {
+            'responseText': output['responseText'],
+            'originalPrompt': output['originalPrompt'],
+            'userPromptQAugment': output['userPromptQAugment'],
+            'doesAnswerMatchSource': output['doesAnswerMatchSource'],
+        }
     }
 
 if __name__ == "__main__":
