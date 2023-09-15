@@ -1,4 +1,6 @@
 import sys
+import nltk
+nltk.data.path.append("./nltk_data")
 from llama_index.llms import OpenAI
 from llama_index import (
     VectorStoreIndex,
@@ -8,7 +10,7 @@ from llama_index import (
     load_index_from_storage,
     set_global_service_context,
 )
-from llama_index.indices.postprocessor import SentenceTransformerRerank
+# from llama_index.indices.postprocessor import SentenceTransformerRerank
 from llama_index.node_parser import SimpleNodeParser
 from llama_index.evaluation import ResponseEvaluator
 from llama_index.callbacks import CallbackManager, LlamaDebugHandler
@@ -40,7 +42,7 @@ def main(userPrompt, saveResults):
 
     # Settings
     rerankTopN = 2
-    similarityTopK = 4
+    similarityTopK = 2
     loadDataPath = 'data'
     index_path = './storage'
     evaluateResponse = True
@@ -74,15 +76,15 @@ def main(userPrompt, saveResults):
         index = VectorStoreIndex(nodes, service_context=service_context)
         index.storage_context.persist()
 
-    #https://wandb.ai/ayush-thakur/llama-index-report/reports/Building-Advanced-Query-Engine-and-Evaluation-with-LlamaIndex-and-W-B--Vmlldzo0OTIzMjMy#setting-up-evaluation-using-llamaindex
-    rerank = SentenceTransformerRerank(
-        model="cross-encoder/ms-marco-MiniLM-L-2-v2", top_n=rerankTopN
-    )
+    ## https://wandb.ai/ayush-thakur/llama-index-report/reports/Building-Advanced-Query-Engine-and-Evaluation-with-LlamaIndex-and-W-B--Vmlldzo0OTIzMjMy#setting-up-evaluation-using-llamaindex
+    # rerank = SentenceTransformerRerank(
+    #     model="cross-encoder/ms-marco-MiniLM-L-2-v2", top_n=rerankTopN
+    # )
 
     query_engine = index.as_query_engine(
         text_qa_template=EMAIL_SUPPORT_TEXT_QA_PROMPT,
         similarity_top_k=similarityTopK,
-        node_postprocessors=[rerank],
+        # node_postprocessors=[rerank],
     )
     response = query_engine.query(userPromptQAugment)
 
@@ -115,6 +117,18 @@ def main(userPrompt, saveResults):
             file.write("Answer:\n" + response.response + "\n\n")
             file.write("Settings:\n" + "rerank top n: " + str(rerankTopN) + ", similarity top K:" + str(similarityTopK))
             file.write("\n\n---------------------------\n\n")
+
+    return response
+
+def lambda_handler(event, context):
+    arg1 = event.get("prompt")
+    print(arg1)
+    response = main(arg1,"0")
+    
+    return {
+        'statusCode': 200,
+        'body': response
+    }
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:

@@ -1,16 +1,11 @@
 import re
-alphabets= "([A-Za-z])"
-prefixes = "(Mr|St|Mrs|Ms|Dr)[.]"
-suffixes = "(Inc|Ltd|Jr|Sr|Co)"
-starters = "(Mr|Mrs|Ms|Dr|Prof|Capt|Cpt|Lt|He\s|She\s|It\s|They\s|Their\s|Our\s|We\s|But\s|However\s|That\s|This\s|Wherever)"
-acronyms = "([A-Z][.][A-Z][.](?:[A-Z][.])?)"
-websites = "[.](com|net|org|io|gov|edu|me)"
-digits = "([0-9])"
-multiple_dots = r'\.{2,}'
+import nltk
+nltk.data.path.append("./nltk_data")
+from nltk.tokenize import sent_tokenize
 
 def contains_question(text):
     # Tokenize the text into sentences
-    sentences = split_into_sentences(text)
+    sentences = sent_tokenize(text)
     
     # Check if any sentence ends with a question mark
     for sentence in sentences:
@@ -37,6 +32,15 @@ def remove_sentences(paragraph, matches):
     return ' '.join(filtered_sentences)
 
 # https://stackoverflow.com/questions/4576077/how-can-i-split-a-text-into-sentences
+# split_into_sentences is an alternative to nltk's sent_tokenize
+alphabets= "([A-Za-z])"
+prefixes = "(Mr|St|Mrs|Ms|Dr)[.]"
+suffixes = "(Inc|Ltd|Jr|Sr|Co)"
+starters = "(Mr|Mrs|Ms|Dr|Prof|Capt|Cpt|Lt|He\s|She\s|It\s|They\s|Their\s|Our\s|We\s|But\s|However\s|That\s|This\s|Wherever)"
+acronyms = "([A-Z][.][A-Z][.](?:[A-Z][.])?)"
+websites = "[.](com|net|org|io|gov|edu|me)"
+digits = "([0-9])"
+multiple_dots = r'\.{2,}'
 def split_into_sentences(text: str) -> list[str]:
     """
     Split the text into sentences.
