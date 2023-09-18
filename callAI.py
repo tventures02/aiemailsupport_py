@@ -8,7 +8,7 @@ from llama_index import (
     set_global_service_context,
 )
 # from llama_index.indices.postprocessor import SentenceTransformerRerank
-# Use "git submodule update --remote" to update submovile to latest commit in aiemailsupport_vectorstore repo
+# Use "git submodule update --init --recursive" to update submovile to latest commit in aiemailsupport_vectorstore repo
 from aiemailsupport_vectorstore import createAndSaveIndex
 from aiemailsupport_vectorstore import loadIndex
 from llama_index.evaluation import ResponseEvaluator
