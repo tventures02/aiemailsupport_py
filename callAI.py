@@ -32,7 +32,8 @@ def main(userPrompt, saveResults):
     rerankTopN = 2
     similarityTopK = 2
     loadDataPath = 'data'
-    index_path = './storage'
+    dbPath = './aiemailsupport_vectorstore/chromaDB'
+    collectionName = 'bptm'
     evaluateResponse = True
 
     llm_gpt35 = OpenAI(temperature=0, model='gpt-3.5-turbo')
@@ -56,12 +57,12 @@ def main(userPrompt, saveResults):
     set_global_service_context(service_context)
 
     # Load index from chromadb
-    index = loadIndex.main("./aiemailsupport_vectorstore/chromaDB", "bptm")
+    index = loadIndex.main(dbPath, collectionName)
     print(index)
 
     if index is None:
         # Create and save vector store to chromadb and persist on disk volume
-        index = createAndSaveIndex.main(loadDataPath, "./aiemailsupport_vectorstore/chromaDB","bptm")
+        index = createAndSaveIndex.main(loadDataPath, dbPath, collectionName)
 
     ## https://wandb.ai/ayush-thakur/llama-index-report/reports/Building-Advanced-Query-Engine-and-Evaluation-with-LlamaIndex-and-W-B--Vmlldzo0OTIzMjMy#setting-up-evaluation-using-llamaindex
     # rerank = SentenceTransformerRerank(
