@@ -6,7 +6,7 @@ app = Flask(__name__)
 CORS(app) # allow all
 #CORS(app, origins=["https://your-allowed-domain.com", "https://another-allowed-domain.com"])
 
-@app.route('/api/callSupportScribe', methods=['POST'])
+@app.route('/api/callSupportScribe', methods=['GET','POST'])
 def call_support_scribe():
     from callAI import main
     data = request.json
@@ -15,6 +15,7 @@ def call_support_scribe():
     prompt = data.get('prompt', '')  # Defaulting to an empty string if 'message' key doesn't exist
     print(prompt)
     output = main(prompt, "0")
+    #return jsonify(message='hello world')
     
     return jsonify(output), 200
 

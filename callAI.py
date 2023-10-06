@@ -37,8 +37,8 @@ def main(userPrompt, saveResults):
     evaluateResponse = True
 
     llm_gpt35 = OpenAI(temperature=0, model='gpt-3.5-turbo')
-    # llm_gpt4 = OpenAI(temperature=0, model='gpt-3.5-turbo')
-    llm_gpt4 = OpenAI(temperature=0, model='gpt-4')
+    llm_gpt4 = OpenAI(temperature=0, model='gpt-3.5-turbo')
+    # llm_gpt4 = OpenAI(temperature=0, model='gpt-4')
 
     # Augment the user's prompt with a question if there are no questions in the prompt
     user_prompt_contains_question = contains_question(userPrompt)
