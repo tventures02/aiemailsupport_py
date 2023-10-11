@@ -6,7 +6,7 @@ app = Flask(__name__)
 CORS(app) # allow all
 #CORS(app, origins=["https://your-allowed-domain.com", "https://another-allowed-domain.com"])
 
-@app.route('/api/callSupportScribe', methods=['GET','POST'])
+@app.route('/api/callSupportScribeV1', methods=['GET','POST'])
 def call_support_scribe():
     from callAI import main
     data = request.json
