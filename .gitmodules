@@ -1,0 +1,3 @@
+[submodule "aiemailsupport_vectorstore"]
+	path = aiemailsupport_vectorstore
+	url = https://github.com/tventures02/aiemailsupport_vectorstore.git

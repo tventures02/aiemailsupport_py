@@ -4,15 +4,13 @@ import nltk
 nltk.data.path.append("./nltk_data")
 from llama_index.llms import OpenAI
 from llama_index import (
-    VectorStoreIndex,
-    SimpleDirectoryReader,
-    StorageContext,
     ServiceContext,
-    load_index_from_storage,
     set_global_service_context,
 )
 # from llama_index.indices.postprocessor import SentenceTransformerRerank
-from llama_index.node_parser import SimpleNodeParser
+# Use "git submodule update --init --recursive" to update submodule to latest commit in aiemailsupport_vectorstore repo
+from aiemailsupport_vectorstore import createAndSaveIndex
+from aiemailsupport_vectorstore import loadIndex
 from llama_index.evaluation import ResponseEvaluator
 from llama_index.callbacks import CallbackManager, LlamaDebugHandler
 from email_support_QA_prompts import (
@@ -24,17 +22,6 @@ from nlp_functions import (
     contains_question,
     )
 
-def load_index_from_disk(index_path):
-    try:
-        storage_context = StorageContext.from_defaults(persist_dir=f"{index_path}")
-        # load index
-        index = load_index_from_storage(storage_context)
-        print(f"Loaded index from {index_path}: {index}")
-        return index
-    except FileNotFoundError:
-        print(f"Index {index_path} not found!")
-        return None
-
 def main(userPrompt, saveResults):
     print(f"You passed the prompt:")
     print(userPrompt + "\n\n")
@@ -45,7 +32,8 @@ def main(userPrompt, saveResults):
     rerankTopN = 2
     similarityTopK = 2
     loadDataPath = 'data'
-    index_path = './storage'
+    dbPath = './aiemailsupport_vectorstore/chromaDB'
+    collectionName = 'bptm'
     evaluateResponse = True
 
     llm_gpt35 = OpenAI(temperature=0, model='gpt-3.5-turbo')
@@ -67,15 +55,14 @@ def main(userPrompt, saveResults):
         callback_manager=callback_manager
         )
     set_global_service_context(service_context)
-    index = load_index_from_disk(index_path)
+
+    # Load index from chromadb
+    index = loadIndex.main(dbPath, collectionName)
+    print(index)
 
     if index is None:
-        documents = SimpleDirectoryReader(loadDataPath).load_data()
-        parser = SimpleNodeParser.from_defaults() # default chunk_size=1024, chunk_overlap=20
-        nodes = parser.get_nodes_from_documents(documents)
-        # print(nodes)
-        index = VectorStoreIndex(nodes, service_context=service_context)
-        index.storage_context.persist()
+        # Create and save vector store to chromadb and persist on disk volume
+        index = createAndSaveIndex.main(loadDataPath, dbPath, collectionName)
 
     ## https://wandb.ai/ayush-thakur/llama-index-report/reports/Building-Advanced-Query-Engine-and-Evaluation-with-LlamaIndex-and-W-B--Vmlldzo0OTIzMjMy#setting-up-evaluation-using-llamaindex
     # rerank = SentenceTransformerRerank(
