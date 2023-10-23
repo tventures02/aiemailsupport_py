@@ -2,6 +2,29 @@ import re
 import nltk
 nltk.data.path.append("./nltk_data")
 from nltk.tokenize import sent_tokenize
+from mailparser_reply import EmailReplyParser
+
+def process_email_body(input_data):
+    # If the input is a single string, return result from remove_signature function
+    if isinstance(input_data, str):
+        return remove_signature_from_email(input_data)
+    
+    # If the input is a list of strings, process each string and store the results in a new list
+    elif isinstance(input_data, list) and all(isinstance(item, str) for item in input_data):
+        result = []
+        for item in input_data:
+            result.append(remove_signature_from_email(item))
+        return " ".join(result)
+    
+    # If the input is neither a string nor a list of strings, raise a ValueError
+    else:
+        raise ValueError("Input must be either a string or a list of strings.")
+    
+def remove_signature_from_email(emailBody):
+    languages = ['en', 'de']
+    clean_emails = EmailReplyParser(languages=languages).read(text=emailBody).replies # returns a list of EmailReplys
+    clean_email = " ".join(obj.body for obj in clean_emails) #concatenate to string
+    return clean_email
 
 def contains_question(text):
     # Tokenize the text into sentences
