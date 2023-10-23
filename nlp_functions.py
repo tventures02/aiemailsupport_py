@@ -2,7 +2,7 @@ import re
 import nltk
 nltk.data.path.append("./nltk_data")
 from nltk.tokenize import sent_tokenize
-from mailparser_reply import EmailReplyParser
+from mailparser_reply import EmailReplyParser #https://github.com/alfonsrv/mail-parser-reply
 
 def process_email_body(input_data):
     # If the input is a single string, return result from remove_signature function
