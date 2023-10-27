@@ -23,18 +23,17 @@ from nlp_functions import (
     process_email_body,
     )
 
-def main(userPrompt, saveResults):
+def main(userPrompt, saveResults, collectionName):
+    print(sys.path)
     print(f"You passed the prompt:")
     print(userPrompt + "\n\n")
-    llama_debug = LlamaDebugHandler(print_trace_on_end=True)
-    callback_manager = CallbackManager([llama_debug])
+    # llama_debug = LlamaDebugHandler(print_trace_on_end=True)
+    # callback_manager = CallbackManager([llama_debug])
 
     # Settings
     rerankTopN = 2
     similarityTopK = 2
-    loadDataPath = 'data'
-    dbPath = './aiemailsupport_vectorstore/chromaDB'
-    collectionName = 'bptm'
+    # collectionName = 'bptm'
     evaluateResponse = True
 
     llm_gpt35 = OpenAI(temperature=0, model='gpt-3.5-turbo')
@@ -59,19 +58,21 @@ def main(userPrompt, saveResults):
 
     service_context = ServiceContext.from_defaults(
         llm=llm_gpt4,
-        callback_manager=callback_manager
+        # callback_manager=callback_manager
         )
     set_global_service_context(service_context)
 
     # Load index from chromadb
-    index = loadIndex.main(dbPath, collectionName)
+    index = loadIndex.main(collectionName)
     print(index)
 
     if index is None:
-        # Create and save vector store to chromadb and persist on disk volume
-        index = createAndSaveIndex.main(loadDataPath, dbPath, collectionName)
+        return {
+            'success': False,
+            'message': 'Error: context document index could not be loaded.'
+    }
 
-    ## https://wandb.ai/ayush-thakur/llama-index-report/reports/Building-Advanced-Query-Engine-and-Evaluation-with-LlamaIndex-and-W-B--Vmlldzo0OTIzMjMy#setting-up-evaluation-using-llamaindex
+    # https://wandb.ai/ayush-thakur/llama-index-report/reports/Building-Advanced-Query-Engine-and-Evaluation-with-LlamaIndex-and-W-B--Vmlldzo0OTIzMjMy#setting-up-evaluation-using-llamaindex
     # rerank = SentenceTransformerRerank(
     #     model="cross-encoder/ms-marco-MiniLM-L-2-v2", top_n=rerankTopN
     # )
@@ -84,8 +85,8 @@ def main(userPrompt, saveResults):
     response = query_engine.query(userPromptQAugment)
 
     # Print info on llm inputs/outputs
-    event_pairs = llama_debug.get_llm_inputs_outputs()
-    print(event_pairs[0][0]) # Show what was sent to LLM
+    # event_pairs = llama_debug.get_llm_inputs_outputs()
+    # print(event_pairs[0][0]) # Show what was sent to LLM
     print(f"\n\nAnswer: ")
     print(response)
 
@@ -116,6 +117,7 @@ def main(userPrompt, saveResults):
             file.write("\n\n---------------------------\n\n")
 
     return {
+        'success': True,
         'responseText': response.response,
         'originalPrompt': userPrompt,
         'userPromptQAugment': userPromptQAugment,
@@ -131,6 +133,7 @@ def lambda_handler(event, context):
     return {
         'statusCode': 200,
         'body': {
+            'success': True,
             'responseText': output['responseText'],
             'originalPrompt': output['originalPrompt'],
             'userPromptQAugment': output['userPromptQAugment'],
@@ -139,9 +142,9 @@ def lambda_handler(event, context):
     }
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Usage: python callAI.py <prompt> <save results to txt file = 1, else = 0>")
+    if len(sys.argv) != 4:
+        print("Usage: python callAI.py <prompt> <save results to txt file = 1, else = 0> <collection name>")
     else:
-        main(sys.argv[1], sys.argv[2])
+        main(sys.argv[1], sys.argv[2], sys.argv[3])
 
 
