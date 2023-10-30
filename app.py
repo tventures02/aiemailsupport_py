@@ -24,7 +24,7 @@ def create_and_save_document_index():
     docId = data.get('docId', '')
     collection = data.get('collection', '')
     refreshToken = data.get('refreshToken', '')
-    output = main('', collection, docId, refreshToken)
+    output = main( collection, docId, refreshToken)
 
     if output != None:
         return jsonify(success=True), 200
