@@ -28,7 +28,7 @@ def create_and_save_document_index():
     success = output["success"]
 
     if success:
-        return jsonify(success=True), 200
+        return jsonify(success=True, message=output["message"]), 200
     else:
         return jsonify(success=False,error=output["error"]), 500
 
