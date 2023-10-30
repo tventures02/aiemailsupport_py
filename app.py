@@ -25,11 +25,12 @@ def create_and_save_document_index():
     collection = data.get('collection', '')
     refreshToken = data.get('refreshToken', '')
     output = main( collection, docId, refreshToken)
+    success = output["success"]
 
-    if output != None:
+    if success:
         return jsonify(success=True), 200
     else:
-        return jsonify(success=False), 500
+        return jsonify(success=False,error=output["error"]), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)  # Running on port 5000
