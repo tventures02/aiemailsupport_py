@@ -20,6 +20,7 @@ from email_support_QA_prompts import (
 from nlp_functions import (
     find_matches,
     contains_question,
+    process_email_body,
     )
 
 def main(userPrompt, saveResults):
@@ -39,6 +40,12 @@ def main(userPrompt, saveResults):
     llm_gpt35 = OpenAI(temperature=0, model='gpt-3.5-turbo')
     # llm_gpt4 = OpenAI(temperature=0, model='gpt-3.5-turbo')
     llm_gpt4 = OpenAI(temperature=0, model='gpt-4')
+
+    # Try to remove signatures from email body
+    try:
+        userPrompt = process_email_body(userPrompt) # userPrompt can be a string or a list of strings
+    except Exception:
+        pass
 
     # Augment the user's prompt with a question if there are no questions in the prompt
     user_prompt_contains_question = contains_question(userPrompt)
