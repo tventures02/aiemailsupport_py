@@ -66,7 +66,24 @@ def create_and_save_document_index():
         else:
             return jsonify(success=False,error=output["error"]), 500
     except Exception as e:
-        print(e)
+        # print(e)
+        return jsonify(success=False,error=str(e)), 500
+
+
+@app.route('/updateCollectionIndex', methods=['GET','POST'])
+def update_collection_index():
+    try:
+        from aiemailsupport_vectorstore.updateIndex import main
+        data = request.json
+        collection = data.get('collection', '') 
+        output = main(collection)
+        success = output["success"]
+        if success:
+            return jsonify(success=True, message=output["message"]), 200
+        else:
+            return jsonify(success=False,error=output["error"]), 500
+    except Exception as e:
+        # print(e)
         return jsonify(success=False,error=str(e)), 500
 
 if __name__ == '__main__':
