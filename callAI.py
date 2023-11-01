@@ -9,7 +9,6 @@ from llama_index import (
 )
 # from llama_index.indices.postprocessor import SentenceTransformerRerank
 # Use "git submodule update --init --recursive" to update submodule to latest commit in aiemailsupport_vectorstore repo
-from aiemailsupport_vectorstore import createAndSaveIndex
 from aiemailsupport_vectorstore import loadIndex
 from llama_index.evaluation import ResponseEvaluator
 from llama_index.callbacks import CallbackManager, LlamaDebugHandler
@@ -24,111 +23,114 @@ from nlp_functions import (
     )
 
 def main(userPrompt, saveResults, collectionName):
-    print(sys.path)
-    print(f"You passed the prompt:")
-    print(userPrompt + "\n\n")
-    # llama_debug = LlamaDebugHandler(print_trace_on_end=True)
-    # callback_manager = CallbackManager([llama_debug])
-
-    # Settings
-    rerankTopN = 2
-    similarityTopK = 2
-    # collectionName = 'bptm'
-    evaluateResponse = True
-
-    llm_gpt35 = OpenAI(temperature=0, model='gpt-3.5-turbo')
-    # llm_gpt4 = OpenAI(temperature=0, model='gpt-3.5-turbo')
-    llm_gpt4 = OpenAI(temperature=0, model='gpt-4')
-
-    # Try to remove signatures from email body
     try:
-        userPrompt = process_email_body(userPrompt) # userPrompt can be a string or a list of strings
-    except Exception:
-        pass
+        # print(sys.path)
+        # print(f"You passed the prompt:")
+        # print(userPrompt + "\n\n")
+        # llama_debug = LlamaDebugHandler(print_trace_on_end=True)
+        # callback_manager = CallbackManager([llama_debug])
 
-    # Augment the user's prompt with a question if there are no questions in the prompt
-    user_prompt_contains_question = contains_question(userPrompt)
-    userPromptQAugment = userPrompt
-    if user_prompt_contains_question == False:
-        augPrompt = "Here is a customer issue: \n\n" + f"'{userPrompt}'\n\n" + "Act as this customer. What are you trying to ask? Be concise. Generate the response as a question. Avoid 'why' questions."
-        resp = llm_gpt35.complete(f"{augPrompt}")
-        userPromptQAugment = userPrompt + "\n\n" + resp.text
-        print(f"Question augmented user prompt:")
-        print(f"{userPromptQAugment}\n\n")
+        # Settings
+        rerankTopN = 2
+        similarityTopK = 2
+        # collectionName = 'bptm'
+        evaluateResponse = True
 
-    service_context = ServiceContext.from_defaults(
-        llm=llm_gpt4,
-        # callback_manager=callback_manager
+        llm_gpt35 = OpenAI(temperature=0, model='gpt-3.5-turbo')
+        # llm_gpt4 = OpenAI(temperature=0, model='gpt-3.5-turbo')
+        llm_gpt4 = OpenAI(temperature=0, model='gpt-4')
+
+        # Try to remove signatures from email body
+        try:
+            userPrompt = process_email_body(userPrompt) # userPrompt can be a string or a list of strings
+        except Exception:
+            pass
+
+        # Augment the user's prompt with a question if there are no questions in the prompt
+        user_prompt_contains_question = contains_question(userPrompt)
+        userPromptQAugment = userPrompt
+        if user_prompt_contains_question == False:
+            augPrompt = "Here is a customer issue: \n\n" + f"'{userPrompt}'\n\n" + "Act as this customer. What are you trying to ask? Be concise. Generate the response as a question. Avoid 'why' questions."
+            resp = llm_gpt35.complete(f"{augPrompt}")
+            userPromptQAugment = userPrompt + "\n\n" + resp.text
+            # print(f"Question augmented user prompt:")
+            # print(f"{userPromptQAugment}\n\n")
+
+        service_context = ServiceContext.from_defaults(
+            llm=llm_gpt4,
+            # callback_manager=callback_manager
+            )
+        set_global_service_context(service_context)
+
+        # Load index from chromadb
+        index = loadIndex.main(collectionName)
+        # print(index)
+
+        if index is None:
+            raise ValueError('No index was found. Please upload a document first.')
+        # https://wandb.ai/ayush-thakur/llama-index-report/reports/Building-Advanced-Query-Engine-and-Evaluation-with-LlamaIndex-and-W-B--Vmlldzo0OTIzMjMy#setting-up-evaluation-using-llamaindex
+        # rerank = SentenceTransformerRerank(
+        #     model="cross-encoder/ms-marco-MiniLM-L-2-v2", top_n=rerankTopN
+        # )
+
+        query_engine = index.as_query_engine(
+            text_qa_template=EMAIL_SUPPORT_TEXT_QA_PROMPT,
+            similarity_top_k=similarityTopK,
+            # node_postprocessors=[rerank],
         )
-    set_global_service_context(service_context)
+        response = query_engine.query(userPromptQAugment)
 
-    # Load index from chromadb
-    index = loadIndex.main(collectionName)
-    print(index)
+        # Print info on llm inputs/outputs
+        # event_pairs = llama_debug.get_llm_inputs_outputs()
+        # print(event_pairs[0][0]) # Show what was sent to LLM
+        # print(f"\n\nAnswer: ")
+        # print(response)
 
-    if index is None:
+        doesAnswerMatchSource = "NO"
+        if (evaluateResponse):
+            service_context35 = ServiceContext.from_defaults(llm=llm_gpt35)
+            evaluator = ResponseEvaluator(service_context=service_context35)
+            eval_result = evaluator.evaluate(response)
+            # print(str(eval_result)) # YES indicates the response was contructed from the source context well. NO indicates otherwise or it hallucinated 
+            doesAnswerMatchSource = str(eval_result)
+
+        # Refine answer if the LLM deviated from guardrails
+        matches = find_matches(response.response, UNWANTED_SENTENCE_PHRASES)
+        if matches:
+            improveRespPrompt = f"Remove any text mentioning \"{matches}\" or similar:\n\n" + f"\"{response.response}\"\n\n Then, rewrite a sensible response." 
+            improvedResp = llm_gpt35.complete(improveRespPrompt)
+            # print(f"\n\nImproved answer: ")
+            # print(improvedResp.text)
+            improvedResp = improvedResp.text.strip('\'"')
+            response.response = improvedResp
+
+        if saveResults == '1':
+            # Open the file in append mode ('a') and write the text
+            with open("testResults.txt", "a") as file:
+                file.write("Prompt:\n" + userPromptQAugment + "\n\n")
+                file.write("Answer:\n" + response.response + "\n\n")
+                file.write("Settings:\n" + "rerank top n: " + str(rerankTopN) + ", similarity top K:" + str(similarityTopK))
+                file.write("\n\n---------------------------\n\n")
+
+        return {
+            'success': True,
+            'responseText': response.response,
+            'originalPrompt': userPrompt,
+            'userPromptQAugment': userPromptQAugment,
+            'doesAnswerMatchSource': doesAnswerMatchSource == 'YES',
+            # TODO return how many tokens were used, source vector(s), actual, complete prompt to chatgpt
+        }
+    except Exception as e:
         return {
             'success': False,
-            'message': 'Error: context document index could not be loaded.'
-    }
-
-    # https://wandb.ai/ayush-thakur/llama-index-report/reports/Building-Advanced-Query-Engine-and-Evaluation-with-LlamaIndex-and-W-B--Vmlldzo0OTIzMjMy#setting-up-evaluation-using-llamaindex
-    # rerank = SentenceTransformerRerank(
-    #     model="cross-encoder/ms-marco-MiniLM-L-2-v2", top_n=rerankTopN
-    # )
-
-    query_engine = index.as_query_engine(
-        text_qa_template=EMAIL_SUPPORT_TEXT_QA_PROMPT,
-        similarity_top_k=similarityTopK,
-        # node_postprocessors=[rerank],
-    )
-    response = query_engine.query(userPromptQAugment)
-
-    # Print info on llm inputs/outputs
-    # event_pairs = llama_debug.get_llm_inputs_outputs()
-    # print(event_pairs[0][0]) # Show what was sent to LLM
-    print(f"\n\nAnswer: ")
-    print(response)
-
-    doesAnswerMatchSource = "NO"
-    if (evaluateResponse):
-        service_context35 = ServiceContext.from_defaults(llm=llm_gpt35)
-        evaluator = ResponseEvaluator(service_context=service_context35)
-        eval_result = evaluator.evaluate(response)
-        print(str(eval_result)) # YES indicates the response was contructed from the source context well. NO indicates otherwise or it hallucinated 
-        doesAnswerMatchSource = str(eval_result)
-
-    # Refine answer if the LLM deviated from guardrails
-    matches = find_matches(response.response, UNWANTED_SENTENCE_PHRASES)
-    if matches:
-        improveRespPrompt = f"Remove any text mentioning \"{matches}\" or similar:\n\n" + f"\"{response.response}\"\n\n Then, rewrite a sensible response." 
-        improvedResp = llm_gpt35.complete(improveRespPrompt)
-        print(f"\n\nImproved answer: ")
-        print(improvedResp.text)
-        improvedResp = improvedResp.text.strip('\'"')
-        response.response = improvedResp
-
-    if saveResults == '1':
-        # Open the file in append mode ('a') and write the text
-        with open("testResults.txt", "a") as file:
-            file.write("Prompt:\n" + userPromptQAugment + "\n\n")
-            file.write("Answer:\n" + response.response + "\n\n")
-            file.write("Settings:\n" + "rerank top n: " + str(rerankTopN) + ", similarity top K:" + str(similarityTopK))
-            file.write("\n\n---------------------------\n\n")
-
-    return {
-        'success': True,
-        'responseText': response.response,
-        'originalPrompt': userPrompt,
-        'userPromptQAugment': userPromptQAugment,
-        'doesAnswerMatchSource': doesAnswerMatchSource == 'YES',
-        # TODO return how many tokens were used, source vector(s), actual, complete prompt to chatgpt
-    }
+            'error': str(e)
+        }
 
 def lambda_handler(event, context):
-    arg1 = event.get("prompt")
-    print(arg1)
-    output = main(arg1,"0")
+    prompt = event.get('prompt', '')  # Defaulting to an empty string if 'prompt' key doesn't exist
+    collection = event.get('collection', '') 
+    # print(prompt)
+    output = main(prompt, "0", collection)
     
     return {
         'statusCode': 200,

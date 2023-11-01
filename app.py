@@ -14,14 +14,21 @@ CORS(app) # allow all
 
 @app.route('/callSupportScribeV1', methods=['GET','POST'])
 def call_support_scribe():
-    from callAI import main
-    data = request.json
-    prompt = data.get('prompt', '')  # Defaulting to an empty string if 'prompt' key doesn't exist
-    collection = data.get('collection', '') 
-    # print(prompt)
-    output = main(prompt, "0", collection)
-    
-    return jsonify(output), 200
+    try:
+        from callAI import main
+        data = request.json
+        prompt = data.get('prompt', '')  # Defaulting to an empty string if 'prompt' key doesn't exist
+        collection = data.get('collection', '') 
+        # print(prompt)
+        output = main(prompt, "0", collection)
+        success = output["success"]
+
+        if success:
+            return jsonify(output), 200
+        else:
+            return jsonify(output), 500
+    except Exception as e:
+        return jsonify(success=False,error=str(e)), 500
 
 @app.route('/createAndSaveDocumentIndex', methods=['POST'])
 def create_and_save_document_index():
@@ -64,7 +71,7 @@ def create_and_save_document_index():
         if success:
             return jsonify(success=True, message=output["message"]), 200
         else:
-            return jsonify(success=False,error=output["error"]), 500
+            return jsonify(output), 500
     except Exception as e:
         # print(e)
         return jsonify(success=False,error=str(e)), 500
@@ -80,9 +87,9 @@ def update_collection_index():
         output = main(collection, deleteCollection)
         success = output["success"]
         if success:
-            return jsonify(success=True, message=output["message"]), 200
+            return jsonify(output), 200
         else:
-            return jsonify(success=False,error=output["error"]), 500
+            return jsonify(output), 500
     except Exception as e:
         # print(e)
         return jsonify(success=False,error=str(e)), 500
