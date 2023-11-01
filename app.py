@@ -76,7 +76,8 @@ def update_collection_index():
         from aiemailsupport_vectorstore.updateIndex import main
         data = request.json
         collection = data.get('collection', '') 
-        output = main(collection)
+        deleteCollection = data.get('delete', False) 
+        output = main(collection, deleteCollection)
         success = output["success"]
         if success:
             return jsonify(success=True, message=output["message"]), 200
