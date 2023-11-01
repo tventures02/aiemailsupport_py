@@ -50,7 +50,7 @@ def create_and_save_document_index():
         googleTokens = user['googleTokens']
         if not documents:
             raise ValueError('No documents to read from.')
-        doc = documents[0] # TODO: 
+        doc = documents[0] # TODO: handle multiple documents
         docId = doc['id']
         collection = str(user['_id']) # use user id as collection name
         refreshToken = googleTokens['refreshToken']
