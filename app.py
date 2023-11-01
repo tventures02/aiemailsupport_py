@@ -70,7 +70,7 @@ def create_and_save_document_index():
         return jsonify(success=False,error=str(e)), 500
 
 
-@app.route('/updateCollectionIndex', methods=['GET','POST'])
+@app.route('/updateCollectionIndex', methods=['POST'])
 def update_collection_index():
     try:
         from aiemailsupport_vectorstore.updateIndex import main
