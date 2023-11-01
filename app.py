@@ -52,7 +52,7 @@ def create_and_save_document_index():
             raise ValueError('No documents to read from.')
         doc = documents[0] # TODO: 
         docId = doc['id']
-        collection = str # use user id as collection name for chromadb index
+        collection = str(user['_id']) # use user id as collection name
         refreshToken = googleTokens['refreshToken']
         if refreshToken == '':
             raise ValueError('No refresh token.')
