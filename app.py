@@ -1,6 +1,11 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from pymongo import MongoClient
+from dotenv import load_dotenv
+import os
+import certifi
+
+load_dotenv() #load .env file
 
 app = Flask(__name__)
 
@@ -28,36 +33,38 @@ def create_and_save_document_index():
         if email == '':
             raise ValueError("No email found.")
         
-        MONGO_URI='mongodb+srv://bpadmin:IMBF9iORG3TVS8XP@bp-dev-and-local.guo9v5t.mongodb.net/supportscribe?retryWrites=true&w=majority'
-        client = MongoClient(MONGO_URI, tlsAllowInvalidCertificates=True)
+        MONGODB_URI = os.environ.get("MONGODB_URI")
+        if MONGODB_URI == None:
+            raise ValueError('No mongodb atlas url found. Please check env variables.')
+        
+        # Connect with mongodb atlas
+        client = MongoClient(MONGODB_URI, tlsCAFile=certifi.where())
         mongodb = client['supportscribe']
         mongodbCollection = mongodb['users']
         
-        
+        # Get user document
         user = mongodbCollection.find_one({"email": email})
         
-        
+        # Parse user document for necessary values
         documents = user['documents']
         googleTokens = user['googleTokens']
-        
-        
-        doc = documents[0]
+        if not documents:
+            raise ValueError('No documents to read from.')
+        doc = documents[0] # TODO: 
         docId = doc['id']
-        collection = user['email']
+        collection = str # use user id as collection name for chromadb index
         refreshToken = googleTokens['refreshToken']
+        if refreshToken == '':
+            raise ValueError('No refresh token.')
         
-        print(docId)
-        print(collection)
-        print(refreshToken)
-        return jsonify(success=True), 200
-        
-        # output = main( collection, docId, refreshToken)
-        # success = output["success"]
+        # Run the create and save chromadb function
+        output = main(collection, docId, refreshToken)
+        success = output["success"]
     
-        # if success:
-        #     return jsonify(success=True, message=output["message"]), 200
-        # else:
-        #     return jsonify(success=False,error=output["error"]), 500
+        if success:
+            return jsonify(success=True, message=output["message"]), 200
+        else:
+            return jsonify(success=False,error=output["error"]), 500
     except Exception as e:
         print(e)
         return jsonify(success=False,error=str(e)), 500
