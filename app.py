@@ -37,6 +37,7 @@ def create_and_save_document_index():
     try:
         data = request.json
         email = data.get('email', '')
+        docId = data.get('docId', '')
         if email == '':
             raise ValueError("No email found.")
         
@@ -53,12 +54,7 @@ def create_and_save_document_index():
         user = mongodbCollection.find_one({"email": email})
         
         # Parse user document for necessary values
-        documents = user['documents']
         googleTokens = user['googleTokens']
-        if not documents:
-            raise ValueError('No documents to read from.')
-        doc = documents[0] # TODO: handle multiple documents
-        docId = doc['id']
         collection = str(user['_id']) # use user id as collection name
         refreshToken = googleTokens['refreshToken']
         if refreshToken == '':
