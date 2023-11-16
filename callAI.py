@@ -1,6 +1,7 @@
 import sys
 import json
 import nltk
+import time
 nltk.data.path.append("./nltk_data")
 from llama_index.llms import OpenAI
 from llama_index import (
@@ -10,7 +11,7 @@ from llama_index import (
 # from llama_index.indices.postprocessor import SentenceTransformerRerank
 # Use "git submodule update --init --recursive" to update submodule to latest commit in aiemailsupport_vectorstore repo
 from aiemailsupport_vectorstore import loadIndex
-from llama_index.evaluation import ResponseEvaluator
+from llama_index.evaluation import FaithfulnessEvaluator
 from llama_index.callbacks import CallbackManager, LlamaDebugHandler
 from email_support_QA_prompts import (
     EMAIL_SUPPORT_TEXT_QA_PROMPT,
@@ -34,11 +35,17 @@ def main(userPrompt, saveResults, collectionName):
         rerankTopN = 2
         similarityTopK = 2
         # collectionName = 'bptm'
-        evaluateResponse = True
+        evaluateResponse = False
+        printOutTime = False
+
+        t0 = time.time();
 
         llm_gpt35 = OpenAI(temperature=0, model='gpt-3.5-turbo')
-        # llm_gpt4 = OpenAI(temperature=0, model='gpt-3.5-turbo')
-        llm_gpt4 = OpenAI(temperature=0, model='gpt-4')
+        llm_gpt4 = OpenAI(temperature=0, model='gpt-4-1106-preview')
+        #llm_gpt4 = OpenAI(temperature=0, model='gpt-4')
+        if printOutTime:
+            t1 = time.time();
+            print(f"Done defining openai models: {t1-t0}\n");
 
         # Try to remove signatures from email body
         try:
@@ -47,6 +54,9 @@ def main(userPrompt, saveResults, collectionName):
             pass
 
         # Augment the user's prompt with a question if there are no questions in the prompt
+        if printOutTime:
+            t1_1 = time.time();
+            print(f"Start augmenting prompt: {t1_1-t0}\n");
         user_prompt_contains_question = contains_question(userPrompt)
         userPromptQAugment = userPrompt
         if user_prompt_contains_question == False:
@@ -55,6 +65,9 @@ def main(userPrompt, saveResults, collectionName):
             userPromptQAugment = userPrompt + "\n\n" + resp.text
             # print(f"Question augmented user prompt:")
             # print(f"{userPromptQAugment}\n\n")
+        if printOutTime:
+            t2 = time.time();
+            print(f"Done augmenting prompt: {t2-t0}\n");
 
         service_context = ServiceContext.from_defaults(
             llm=llm_gpt4,
@@ -63,7 +76,13 @@ def main(userPrompt, saveResults, collectionName):
         set_global_service_context(service_context)
 
         # Load index from chromadb
+        if printOutTime:
+            t2_1 = time.time();
+            print(f"Start loading index: {t2_1-t0}\n");
         index = loadIndex.main(collectionName)
+        if printOutTime:
+            t3 = time.time();
+            print(f"Done loading index: {t3-t0}\n");
         # print(index)
 
         if index is None:
@@ -72,13 +91,24 @@ def main(userPrompt, saveResults, collectionName):
         # rerank = SentenceTransformerRerank(
         #     model="cross-encoder/ms-marco-MiniLM-L-2-v2", top_n=rerankTopN
         # )
-
+        if printOutTime:
+            t4 = time.time();
+            print(f"Start query engine def: {t4-t0}\n");
         query_engine = index.as_query_engine(
             text_qa_template=EMAIL_SUPPORT_TEXT_QA_PROMPT,
             similarity_top_k=similarityTopK,
             # node_postprocessors=[rerank],
         )
+
+        if printOutTime:
+            t4_1 = time.time();
+            print(f"Done query engine def: {t4_1-t0}\n");
+            t4_2 = time.time();
+            print(f"Start getting response: {t4_2-t0}\n");
         response = query_engine.query(userPromptQAugment)
+        if printOutTime:
+            t5 = time.time();
+            print(f"Done getting response: {t5-t0}\n");
 
         # Print info on llm inputs/outputs
         # event_pairs = llama_debug.get_llm_inputs_outputs()
@@ -86,12 +116,15 @@ def main(userPrompt, saveResults, collectionName):
         # print(f"\n\nAnswer: ")
         # print(response)
 
+        if printOutTime:
+            t5_1 = time.time();
+            print(f"Start processing response: {t5_1-t0}\n");
         doesAnswerMatchSource = "NO"
         if (evaluateResponse):
             service_context35 = ServiceContext.from_defaults(llm=llm_gpt35)
-            evaluator = ResponseEvaluator(service_context=service_context35)
-            eval_result = evaluator.evaluate(response)
-            # print(str(eval_result)) # YES indicates the response was contructed from the source context well. NO indicates otherwise or it hallucinated 
+            evaluator = FaithfulnessEvaluator(service_context=service_context35)
+            eval_result = evaluator.evaluate_response(response=response)
+            # print(str(eval_result.passing)) # YES indicates the response was contructed from the source context well. NO indicates otherwise or it hallucinated 
             doesAnswerMatchSource = str(eval_result)
 
         # Refine answer if the LLM deviated from guardrails
@@ -103,6 +136,9 @@ def main(userPrompt, saveResults, collectionName):
             # print(improvedResp.text)
             improvedResp = improvedResp.text.strip('\'"')
             response.response = improvedResp
+        if printOutTime:
+            t6 = time.time();
+            print(f"Done processing  response: {t6-t0}\n");
 
         if saveResults == '1':
             # Open the file in append mode ('a') and write the text
